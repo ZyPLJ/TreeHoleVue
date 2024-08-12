@@ -6,7 +6,7 @@ import { ElMessage } from 'element-plus'
 
 const danmuMsg = ref<string>('')
 const danmaku = ref<any>(null)
-//https://www.pljzy.top/Random/800/1000?seed=6cd048690166090b
+
 const danmus = ref([]);
 const loadComments = async() => {
   const res = await getList()

@@ -4,7 +4,7 @@
 export default function $axios(options) {
     return new Promise((resolve, reject) => {
         const instance = axios.create({
-            baseURL: "https://localhost:44323",
+            baseURL: "http://loaclhost:44323",
         })
         // response 响应拦截器
         instance.interceptors.response.use(

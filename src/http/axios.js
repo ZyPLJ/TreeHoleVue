@@ -1,11 +1,40 @@
 ﻿import axios from 'axios';
-
+import * as auth from '../utils/auth'
 
 export default function $axios(options) {
     return new Promise((resolve, reject) => {
         const instance = axios.create({
-            baseURL: "http://loaclhost:44323",
+            baseURL: "https://localhost:44323",
         })
+        // request 请求拦截器
+        instance.interceptors.request.use(
+            config => {
+                // 发送请求时携带token
+                let token = auth.getToken()
+                config.headers.Authorization = `Bearer ${token}`
+                return config
+            },
+            error => {
+                // 请求发生错误时
+                console.log('request:', error)
+                // 判断请求超时
+                if (error.code === 'ECONNABORTED' && error.message.indexOf('timeout') !== -1) {
+                    console.log('timeout请求超时')
+                }
+                // 需要重定向到错误页面
+                const errorInfo = error.response
+                console.log(errorInfo)
+                if (errorInfo) {
+                    error = errorInfo.data  // 页面那边catch的时候就能拿到详细的错误信息,看最下边的Promise.reject
+                    const errorStatus = errorInfo.status; // 404 403 500 ...
+                    router.push({
+                        path: `/error/${errorStatus}`
+                    })
+                }
+                return Promise.reject(error) // 在调用的那边可以拿到(catch)你想返回的错误信息
+            }
+        )
+
         // response 响应拦截器
         instance.interceptors.response.use(
             response => {

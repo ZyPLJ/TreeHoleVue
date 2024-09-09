@@ -83,7 +83,10 @@ body {
   width: 100%;
   height: 100%;
   z-index: 0;
-  background: linear-gradient(45deg, #5ac381, #20568b);
+  background-image: url('public/beij.jpg');
+  background-repeat: no-repeat;
+  background-attachment: fixed;
+  background-size: cover;
 }
 .main{
   position: absolute;

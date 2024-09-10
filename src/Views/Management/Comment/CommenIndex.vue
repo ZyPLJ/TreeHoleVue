@@ -18,7 +18,7 @@ const load = async () => {
   if(token.value !== "" && token.value !== undefined){
     disabled.value = true;
   }
-  const res = await getApiList();
+  const res = await getApiList( pageSize.value,currentPage.value);
   const format = 'yyyy-MM-dd HH:mm:ss';
   tableData.value = res.data.map((item) => {
     return {
@@ -29,8 +29,8 @@ const load = async () => {
   totalCount.value = res.pagination.totalItemCount;
 }
 
-const handleSizeChange =async (pageSize) => {
-  pageSize.value = pageSize;
+const handleSizeChange =async (pSize) => {
+  pageSize.value = pSize;
   await load()
 };
 const handleCurrentChange =async (page) => {
@@ -155,7 +155,7 @@ load()
       <el-pagination
           v-model:current-page="currentPage"
           v-model:page-size="pageSize"
-          :page-sizes="[100, 200, 300, 400]"
+          :page-sizes="[20, 50, 100, 500]"
           background
           layout="total, prev, pager, next,sizes"
           :total="totalCount"

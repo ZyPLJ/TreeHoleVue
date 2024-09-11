@@ -1,37 +1,58 @@
 ﻿<script setup lang="ts">
-import { ref, reactive } from 'vue'
+import {onUnmounted, ref} from 'vue'
 import vueDanmaku from 'vue3-danmaku'
-import {getList,addComment} from '../http/modules/comment'
-import { ElMessage } from 'element-plus'
+import {addComment, getList} from '../http/modules/comment'
+import {ElMessage} from 'element-plus'
+import * as signalR from '@microsoft/signalr';
+import config from '../config';
 
 const danmuMsg = ref<string>('')
 const danmaku = ref<any>(null)
+const danmakuConfig = config.danmakuConfig
+
+const comments = ref<any[]>([]);
+let connection: signalR.HubConnection | null = null;
+connection = new signalR.HubConnectionBuilder()
+    .withUrl('https://localhost:44323/ChatHub')
+    .build();
+
+connection.on('ReceiveComment', (comment: any) => {  
+  comments.value.push(comment);
+  const _danmuMsg =
+      {
+        avatar: 'https://i.loli.net/2021/01/17/xpwbm3jKytfaNOD.jpg',
+        content: comment.content,
+      }
+  danmaku.value.add(_danmuMsg)
+  console.log(_danmuMsg)
+});
+
+
+connection.start().catch(err => console.error(err.toString()));
 
 const danmus = ref([]);
 const loadComments = async() => {
   const res = await getList()
   if (res.statusCode === 200) {
-    const processedData = res.data.map(item => ({
+    danmus.value = res.data.map(item => ({
       ...item, // 保留原始对象的所有属性  
       avatar: 'https://i.loli.net/2021/01/17/xpwbm3jKytfaNOD.jpg'
     }));
-    danmus.value = processedData;
   }else{
     ElMessage.error('获取信息失败')
   }
 }
 const addDanmu = async () => {
   if (!danmuMsg.value) return
-  const _danmuMsg =
-      {
-        avatar: 'https://i.loli.net/2021/01/17/xpwbm3jKytfaNOD.jpg',
-        content: danmuMsg.value,
-      }
   try {
     let res = await addComment({content: danmuMsg.value})
     if (res.statusCode === 200) {
-      danmaku.value.add(_danmuMsg)
+      if (connection) {
+        connection.invoke('SendComment', res.data.content).catch(err => console.error(err.toString()));
+      }
       ElMessage.success(res.message)
+    }else if(res.statusCode === 400){
+      ElMessage.warning(res.message)
     } else {
       ElMessage.error(res.message)
     }
@@ -41,19 +62,29 @@ const addDanmu = async () => {
   danmuMsg.value = ''
 }
 loadComments()
+
+// 停止连接
+onUnmounted(() => {
+  if (connection) {
+    connection.stop();
+  }
+});
 </script>
 
 <template>
 <div class="app">
   <vue-danmaku ref="danmaku"
                v-model:danmus="danmus"
-               useSlot loop :channels="0"
-               class="content" :speeds="80"
-               :debounce="500"
-               :isSuspend="true">
+               useSlot 
+               :loop="danmakuConfig.loop" 
+               :channels="danmakuConfig.channels"
+               class="content" 
+               :speeds="danmakuConfig.speeds"
+               :debounce="danmakuConfig.debounce"
+               :isSuspend="danmakuConfig.isSuspend">
     <template v-slot:dm="{ index, danmu }">
       <div class="danmu-item">
-        <img :src=" danmu.avatar" class="img" />
+        <img :src="danmu.avatar" class="img" />
         <span>{{ danmu.content }}</span>
       </div>
     </template>

@@ -11,6 +11,7 @@
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.1",
     "@microsoft/signalr": "^8.0.7",
+    "animate.css": "^4.1.1",
     "axios": "^1.7.3",
     "element-plus": "^2.8.0",
     "js-cookie": "^3.0.5",

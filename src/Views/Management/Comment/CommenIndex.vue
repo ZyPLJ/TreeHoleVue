@@ -5,6 +5,7 @@ import { getApiList,delteComment } from '../../../http/modules/comment'
 import { formatTime } from '../../../utils/dateTime';
 import { logincookie,getToken } from "../../../utils/auth";
 import { ElMessage, ElMessageBox } from 'element-plus'
+import AuditEdit from "../../../components/Comment/AuditEdit.vue";
 
 const currentPage = ref(1);
 const pageSize = ref(20);
@@ -12,6 +13,7 @@ const totalCount = ref(1000);
 const tableData = ref();
 const token = ref('')
 const disabled = ref(false)
+const AuditEditDialog = ref(null)
 
 const load = async () => {
   token.value = getToken();
@@ -92,6 +94,11 @@ const handleAddToken = () => {
 const filterTag = (value: string, row) => {
   return row.visible === value
 }
+
+const setAudit= (index,item) =>{
+  AuditEditDialog.value.dialogshow(item.id)
+}
+
 load()
 </script>
 
@@ -135,7 +142,7 @@ load()
         />
         <el-table-column label="操作">
           <template #default="scope">
-            <el-button size="small" type="primary" @click="" :disabled="!scope.row.isNeedAudit">
+            <el-button size="small" type="primary" @click="setAudit(scope.$index,scope.row)" :disabled="scope.row.visible">
               审核
             </el-button>
             <el-button
@@ -164,6 +171,7 @@ load()
       />
     </div>
   </el-footer>
+  <AuditEdit ref="AuditEditDialog" @load="load()"/>
 </template>
 
 <style scoped>

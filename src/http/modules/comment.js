@@ -23,7 +23,30 @@ export const getApiList = (PageSize = 10,Page = 1) => {
         params: {PageSize,Page}
     })
 }
-
+//审核通过
+export const acceptComment = (id,data) => {
+    return axios({
+        url: `/Api/Comment/${id}/Accept/`,
+        method: 'post',
+        //设置json格式
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        data
+    })
+}
+//审核不通过
+export const rejectComment = (id,data) => {
+    return axios({
+        url: `/Api/Comment/${id}/Reject/`,
+        method: 'post',
+        //设置json格式
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        data
+    })
+}
 //删除评论
 export const delteComment = (id) =>{
     return axios({

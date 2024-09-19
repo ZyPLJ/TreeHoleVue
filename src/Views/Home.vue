@@ -1,8 +1,9 @@
 ﻿<script setup lang="ts">
 import {onUnmounted,watch, ref} from 'vue'
 import vueDanmaku from 'vue3-danmaku'
-import OnlineUsers from "../components/OnlineUsers.vue";
+import OnlineUsers from '../components/OnlineUsers.vue';
 import {addComment, getList} from '../http/modules/comment'
+import {addLikeRecord , getRecordList} from '../http/modules/likeRecord'
 import {ElMessage} from 'element-plus'
 import * as signalR from '@microsoft/signalr';
 import config from '../config';
@@ -13,6 +14,12 @@ const danmaku = ref<any>(null);
 const danmakuConfig = config.danmakuConfig;
 const connectionCount = ref(0);// 连接数量
 const onlineUsersRef = ref<HTMLDivElement>(null);
+let clickTimer: ReturnType<typeof setTimeout>;
+const recordReq = ref({
+  CommentId: -1,
+  UserId:null
+})
+
 
 const comments = ref<any[]>([]);
 let connection: signalR.HubConnection | null = null;
@@ -26,6 +33,7 @@ connection.on('ReceiveComment', (comment: any) => {
       {
         avatar: 'https://i.loli.net/2021/01/17/xpwbm3jKytfaNOD.jpg',
         content: comment.content,
+        upNum: 0
       }
   danmaku.value.add(_danmuMsg)
   console.log(_danmuMsg)
@@ -48,8 +56,20 @@ const loadComments = async() => {
   if (res.statusCode === 200) {
     danmus.value = res.data.map(item => ({
       ...item, // 保留原始对象的所有属性  
-      avatar: 'https://i.loli.net/2021/01/17/xpwbm3jKytfaNOD.jpg'
+      avatar: 'https://i.loli.net/2021/01/17/xpwbm3jKytfaNOD.jpg',
+      upNum: 0
     }));
+    const recordRes = await getRecordList()
+    if (recordRes.statusCode === 200) {
+      const recordMap = new Map(recordRes.data.map(item => [item.commentId, item.count]));
+      for (const danmu of danmus.value) {
+        const record = recordMap.get(danmu.id);
+        if (record) {
+          danmu.upNum = record;
+        }
+      }
+    }
+    danmaku.value.play();
   }else{
     ElMessage.error('获取信息失败')
   }
@@ -84,6 +104,21 @@ watch(connectionCount, (newCount, oldCount) => {
     }
   }
 });
+const AddUp = (index) => {
+  const danmu = danmus.value[index];
+  danmu.upNum += 1;
+  
+  if (clickTimer) {
+    clearTimeout(clickTimer);
+  }
+
+  // 设置新的定时器
+  clickTimer = setTimeout(() => {
+    recordReq.value.CommentId = danmu.id;
+    addLikeRecord(recordReq.value);
+    loadComments();
+  }, 1000);
+}
 
 loadComments()
 
@@ -94,6 +129,13 @@ onUnmounted(() => {
     // 清理事件监听器
     connection.off('ReceiveComment');
     connection.off('ConnectionCountChanged');
+  }
+});
+
+//监听 resize 事件，触发时调用 refName.value.resize() 方法
+window.addEventListener('resize', () => {
+  if (danmaku.value) {
+    danmaku.value.resize();
   }
 });
 </script>
@@ -110,9 +152,10 @@ onUnmounted(() => {
                :debounce="danmakuConfig.debounce"
                :isSuspend="danmakuConfig.isSuspend">
     <template v-slot:dm="{ index, danmu }">
-      <div class="danmu-item">
+      <div class="danmu-item" @click="AddUp(index)">
         <img :src="danmu.avatar" class="img" />
         <span>{{ danmu.content }}</span>
+        <span class="plus">{{ danmu.upNum }}</span>
       </div>
     </template>
   </vue-danmaku>
@@ -179,6 +222,20 @@ body {
   padding: 5px;
   opacity: 0.8;
 }
+.danmu-item span{
+  cursor: pointer;
+}
+.danmu-item:active {
+  transform: scale(0.95); 
+  background-color: rgba(255, 255, 255, 0.5);
+}
+.danmu-item:hover .plus{
+  opacity: 0.3;
+}
+.plus{
+  opacity: 0;
+}
+
 .custom-input {
   background-color: transparent; /* 背景透明 */
   border: 2px solid white; 

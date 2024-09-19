@@ -116,6 +116,7 @@ load()
         <el-table-column type="selection" width="55" />
         <el-table-column property="content" label="内容" />
         <el-table-column property="createTime" label="时间" sortable  />
+        <el-table-column property="likeCount" label="点赞量" sortable/>
         <el-table-column
             prop="tag"
             label="可见"

@@ -55,3 +55,9 @@ export const delteComment = (id) =>{
     })
 }
 
+export const getRankingList = () => {
+    return axios({
+        url: 'Comment/GetRanking',
+        method: 'get',
+    })
+}

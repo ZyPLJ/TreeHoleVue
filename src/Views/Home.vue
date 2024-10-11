@@ -1,5 +1,5 @@
 ﻿<script setup lang="ts">
-import {onUnmounted,watch, ref} from 'vue'
+import {onUnmounted,watch, ref } from 'vue'
 import vueDanmaku from 'vue3-danmaku'
 import OnlineUsers from '../components/OnlineUsers.vue';
 import PopupBox from '../components/PopupBox.vue';
@@ -9,6 +9,7 @@ import {ElMessage} from 'element-plus'
 import * as signalR from '@microsoft/signalr';
 import config from '../config';
 import 'animate.css';
+import {formatTime} from '../utils/dateTime'
 
 const danmuMsg = ref<string>('');
 const danmaku = ref<any>(null);
@@ -22,21 +23,24 @@ const recordReq = ref({
 })
 const isPopupVisible = ref(false);
 const rankingList = ref<any[]>([]);
+const newComment = ref({
+  createTime: '',
+  content: ''
+})
 
-
-const comments = ref<any[]>([]);
 let connection: signalR.HubConnection | null = null;
 connection = new signalR.HubConnectionBuilder()
     .withUrl('https://localhost:44323/ChatHub')
     .build();
 
-connection.on('ReceiveComment', (comment: any) => {  
-  comments.value.push(comment);
+connection.on('ReceiveComment', (comment: any) => {
   const _danmuMsg =
       {
+        id: comment.id,
         avatar: 'https://i.loli.net/2021/01/17/xpwbm3jKytfaNOD.jpg',
         content: comment.content,
-        upNum: 0
+        upNum: 0,
+        isLatest: true
       }
   danmaku.value.add(_danmuMsg)
   console.log(_danmuMsg)
@@ -45,6 +49,19 @@ connection.on('ReceiveComment', (comment: any) => {
 connection.on('ConnectionCountChanged', (count) => {
   connectionCount.value = count;
   console.log(`当前连接数量：${count}`);
+});
+//订阅最新评论事件
+connection.on('LatestCommentTimeChanged', (comment) => {
+  console.log(`最新评论：${comment.id},${comment.latestCommentTime}`);
+  danmus.value.forEach(d => {
+    d.isLatest = d.id === comment.id; // 更新最新评论的标志
+  });
+  debugger
+  const latestDanmu = danmus.value.find(d => d.id === comment.id);
+  if (latestDanmu) {
+    newComment.value.createTime = formatTime('yyyy-MM-dd HH:mm:ss',comment.latestCommentTime);
+    newComment.value.content = latestDanmu.content;
+  }
 });
 
 connection.start().then(()=>{
@@ -60,8 +77,14 @@ const loadComments = async() => {
     danmus.value = res.data.map(item => ({
       ...item, // 保留原始对象的所有属性  
       avatar: 'https://i.loli.net/2021/01/17/xpwbm3jKytfaNOD.jpg',
-      upNum: 0
+      upNum: 0,
+      isLatest: false
     }));
+    if (danmus.value.length > 0) {
+      danmus.value[0].isLatest = true;
+      newComment.value.createTime = formatTime('yyyy-MM-dd HH:mm:ss',danmus.value[0].createTime);
+      newComment.value.content = danmus.value[0].content;
+    }
     const recordRes = await getRecordList()
     if (recordRes.statusCode === 200) {
       const recordMap = new Map(recordRes.data.map(item => [item.commentId, item.count]));
@@ -90,7 +113,8 @@ const addDanmu = async () => {
     let res = await addComment({content: danmuMsg.value})
     if (res.statusCode === 200) {
       if (connection) {
-        connection.invoke('SendComment', res.data.content).catch(err => console.error(err.toString()));
+        connection.invoke('SendComment', res.data.id,res.data.content).catch(err => console.error(err.toString()));
+        connection.invoke('BroadcastLatestCommentTime', res.data.id,res.data.createTime).catch(err => console.error(err.toString()));
       }
       ElMessage.success(res.message)
     }else if(res.statusCode === 400){
@@ -128,7 +152,6 @@ const AddUp = async (danmu) => {
     await loadRankingList();
   }, 1000);
 }
-
 const showPopup = async () => {
   await loadRankingList();
   isPopupVisible.value = true;
@@ -152,6 +175,7 @@ window.addEventListener('resize', () => {
     danmaku.value.resize();
   }
 });
+
 </script>
 
 <template>
@@ -166,7 +190,7 @@ window.addEventListener('resize', () => {
                :debounce="danmakuConfig.debounce"
                :isSuspend="danmakuConfig.isSuspend">
     <template v-slot:dm="{ index, danmu }">
-      <div class="danmu-item" @click="AddUp(danmu)">
+      <div class="danmu-item" @click="AddUp(danmu)" :class="{ highlighted: danmu.isLatest }">
         <img :src="danmu.avatar" class="img" />
         <span>{{ danmu.content }}</span>
         <span class="plus">
@@ -206,6 +230,13 @@ window.addEventListener('resize', () => {
       </p>
     </el-scrollbar>
   </PopupBox>
+  <div class="footer" style="position: fixed; bottom: 0; left: 0; right: 0; text-align: center; rgb(241 241 241 / 86%); padding: 5px;">
+    <span>
+      最新吐槽：
+      {{ newComment.createTime }} : 
+      {{ newComment.content.length > 25 ? newComment.content.slice(0, 25) + '...' : newComment.content }}
+    </span>
+  </div>
 </div>
 </template>
 
@@ -294,7 +325,7 @@ body {
 
 .online-users-container {
   position: fixed;
-  bottom: 20px;
+  bottom: 40px;
   right: 20px;
   display: flex;
   align-items: center;
@@ -332,4 +363,9 @@ body {
   width: 10px;
 }
 
+.highlighted {
+  background-color: #000000;
+  border: 2px solid #000000;
+  color:yellow;
+}
 </style>

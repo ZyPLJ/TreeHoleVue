@@ -4,7 +4,7 @@
  * @param {string} format - 要输出的时间格式，例如 'yyyy-MM-dd HH:mm:ss'
  * @returns {string} 格式化后的时间字符串
  */
-function formatTime(timeStr, format) {
+function formatTime(format,timeStr) {
     const date = new Date(timeStr); // 将时间字符串转换为Date对象
     const year = date.getFullYear();
     const month = padZero(date.getMonth() + 1);
@@ -13,34 +13,20 @@ function formatTime(timeStr, format) {
     const minute = padZero(date.getMinutes());
     const second = padZero(date.getSeconds());
     const millisecond = padZero(date.getMilliseconds(), 3);
+
     return format
         .replace('yyyy', year.toString())
         .replace('MM', month.toString())
         .replace('dd', day.toString())
         .replace('HH', hour.toString())
         .replace('mm', minute.toString())
-        .replace('ss', second.toString())
+        .replace('ss', second.toString())   // 确保包含秒
         .replace('SSS', millisecond.toString());
 }
 
-function formatDate(timeStr) {
-    const dateObj = new Date(timeStr);
-    return dateObj.toISOString().replace(/T/, ' ').replace(/\..+/, '');
+
+function padZero(num, length = 2) {
+    return String(num).padStart(length, '0');
 }
 
-
-/**
- * 在数字前补0，使其达到指定的位数
- * @param {number} num - 要补0的数字
- * @param {number} length - 补0后要达到的位数
- * @returns {string} 补0后的字符串
- */
-function padZero(num, length = 2) {
-    let str = num.toString();
-    while (str.length < length) {
-        str = '0' + str;
-    }
-    return str;
-}   
-
-export {formatTime, formatDate};
+export {formatTime};

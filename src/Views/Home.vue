@@ -56,7 +56,6 @@ connection.on('LatestCommentTimeChanged', (comment) => {
   danmus.value.forEach(d => {
     d.isLatest = d.id === comment.id; // 更新最新评论的标志
   });
-  debugger
   const latestDanmu = danmus.value.find(d => d.id === comment.id);
   if (latestDanmu) {
     newComment.value.createTime = formatTime('yyyy-MM-dd HH:mm:ss',comment.latestCommentTime);

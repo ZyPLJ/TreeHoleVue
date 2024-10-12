@@ -54,6 +54,14 @@ export const delteComment = (id) =>{
         method:'delete',
     })
 }
+//删除多条评论
+export const delteComments = (ids) =>{
+    return axios({
+        url:"/Api/Comment",
+        method:'delete',
+        data:ids
+    })
+}
 
 export const getRankingList = () => {
     return axios({

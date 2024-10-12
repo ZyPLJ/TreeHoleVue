@@ -1,7 +1,7 @@
 ﻿<script setup lang="ts">
 import {ref} from 'vue'
 import {Delete,Check} from '@element-plus/icons-vue'
-import { getApiList,delteComment } from '../../../http/modules/comment'
+import { getApiList,delteComment,delteComments } from '../../../http/modules/comment'
 import { formatTime } from '../../../utils/dateTime';
 import { logincookie,getToken } from "../../../utils/auth";
 import { ElMessage, ElMessageBox } from 'element-plus'
@@ -14,7 +14,7 @@ const tableData = ref();
 const token = ref('')
 const disabled = ref(false)
 const AuditEditDialog = ref(null)
-
+const selectedData = ref([]);
 const load = async () => {
   token.value = getToken();
   if(token.value !== "" && token.value !== undefined){
@@ -72,8 +72,8 @@ const handleDelete = (index: number, row) => {
               message: err.message,
             })
           }
-      }).finally(() => {
-          load()
+      }).finally(async () => {
+         await load();
       })
 }
 
@@ -99,20 +99,61 @@ const setAudit= (index,item) =>{
   AuditEditDialog.value.dialogshow(item.id)
 }
 
+const handleSelectionChange = (val) => {
+  selectedData.value = val
+}
+
+const handleDeletes = async () => {
+  ElMessageBox.confirm(
+      '确定删除所选评论?',
+      '提示',
+      {
+        confirmButtonText: 'OK',
+        cancelButtonText: 'Cancel',
+        type: 'warning',
+        center: true,
+      }
+  )
+      .then(async () => {
+        try{
+          let data = selectedData.value.map((item) => item.id)
+          const res =await delteComments(data)
+          if(res.statusCode === 200){
+            ElMessage({
+              type:'success',
+              message: res.message,
+            })
+          }else{
+            ElMessage({
+              type: 'error',
+              message: res.message,
+            })
+          }
+        }catch (err){
+          ElMessage({
+            type: 'error',
+            message: err.message,
+          })
+        }
+      }).finally(async () => {
+    await load();
+  })
+}
+
 load()
 </script>
 
 <template>
   <el-container>
     <el-header height="60px" style="display: flex; justify-content: flex-end;">
-      <el-button type="danger" :icon="Delete">删除</el-button>
+      <el-button type="danger" :icon="Delete" @click="handleDeletes()" :disabled="selectedData.length === 0">删除</el-button>
     </el-header>
     <el-main>
       <el-row :gutter="20">
         <el-col :span="6"><el-input v-model="token" placeholder="设置token" :disabled="disabled" /></el-col>
         <el-col :span="4"><el-button type="success" :icon="Check" circle @click="handleAddToken"/></el-col>
       </el-row>
-      <el-table :data="tableData" style="width: 100%" table-layout="fixed">
+      <el-table :data="tableData" style="width: 100%" table-layout="fixed"  @selection-change="handleSelectionChange">
         <el-table-column type="selection" width="55" />
         <el-table-column property="content" label="内容" />
         <el-table-column property="createTime" label="时间" sortable  />
